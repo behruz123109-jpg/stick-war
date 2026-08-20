@@ -1,15 +1,29 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import json
+from fastapi.middleware.cors import CORSMiddleware
 import database as db
+import asyncio
 
 app = FastAPI()
 
-# Statik fayllarni (HTML, CSS, JS) ulash
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Vercel'dan kelayotgan ulanishlarga ruxsat berish (CORS)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Keyinchalik buni Vercel domeningga o'zgartirasan
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Xonalarni boshqarish
+# Server ishga tushganda Turso bazani tayyorlaymiz
+@app.on_event("startup")
+async def startup_event():
+    await db.init_db()
+
+# Render manzili ishlashini tekshirish uchun oddiy ping
+@app.get("/")
+async def root():
+    return {"status": "Backend ishlamoqda. Vercel saytiga kiring."}
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: dict = {}
@@ -21,7 +35,10 @@ class ConnectionManager:
         self.active_connections[room_id].append(websocket)
 
     def disconnect(self, websocket: WebSocket, room_id: str):
-        self.active_connections[room_id].remove(websocket)
+        if room_id in self.active_connections:
+            self.active_connections[room_id].remove(websocket)
+            if not self.active_connections[room_id]:
+                del self.active_connections[room_id]
 
     async def broadcast(self, message: str, room_id: str):
         if room_id in self.active_connections:
@@ -30,30 +47,12 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.get("/")
-async def serve_game():
-    return FileResponse("static/index.html")
-
-@app.get("/admin")
-async def serve_admin():
-    return FileResponse("static/admin.html")
-
-# Reklama ko'rilganda olmos berish API
-@app.post("/api/reward/{username}")
-async def reward_player(username: str):
-    reward_amount = db.get_setting('gem_reward')
-    # Baza yangilanadi
-    db.update_user_gems(username, reward_amount)
-    return {"status": "success", "message": f"{reward_amount} olmos berildi!"}
-
-# WebSocket Multiplayer Logic
 @app.websocket("/ws/{room_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str):
     await manager.connect(websocket, room_id)
     try:
         while True:
             data = await websocket.receive_text()
-            # Barcha o'yinchilarga harakatni jo'natish
             await manager.broadcast(data, room_id)
     except WebSocketDisconnect:
         manager.disconnect(websocket, room_id)
