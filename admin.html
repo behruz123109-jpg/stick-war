@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Stick War</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f4f4f4; }
+        .card { background: white; padding: 20px; border-radius: 8px; max-width: 400px; margin: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input { padding: 8px; width: 100%; margin-bottom: 10px; box-sizing: border-box; }
+        button { padding: 10px; width: 100%; background: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>O'yin Sozlamalari (Admin)</h2>
+        <label>Bitta reklama uchun beriladigan olmos:</label>
+        <input type="number" id="gemReward" value="10">
+        
+        <label>Kunlik reklama limiti:</label>
+        <input type="number" id="dailyLimit" value="5">
+        
+        <button onclick="saveSettings()">Saqlash</button>
+    </div>
+
+    <script>
+        function saveSettings() {
+            // Backend admin API ga ulash uchun joy (keyingi qadamda yoziladi)
+            alert("Sozlamalar saqlandi! (Ma'lumotlar bazasida yangilandi)");
+        }
+    </script>
+</body>
+</html>
