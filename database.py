@@ -1,6 +1,6 @@
 import sqlite3
 
-DB_NAME = "game_data.db"
+DB_NAME = "game.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -10,43 +10,43 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            google_id TEXT UNIQUE,
-            username TEXT,
-            gems INTEGER DEFAULT 0,
+            username TEXT UNIQUE,
             gold INTEGER DEFAULT 500,
-            ads_watched_chest INTEGER DEFAULT 0,
-            ads_watched_gem INTEGER DEFAULT 0
+            gems INTEGER DEFAULT 0,
+            daily_ads_watched INTEGER DEFAULT 0
         )
     ''')
     
-    # Admin sozlamalari jadvali
+    # Admin sozlamalari
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS admin_config (
-            key TEXT PRIMARY KEY,
-            value INTEGER
+        CREATE TABLE IF NOT EXISTS admin_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value INTEGER
         )
     ''')
     
-    # Boshlang'ich limitlarni o'rnatish
-    cursor.execute("INSERT OR IGNORE INTO admin_config VALUES ('daily_chest_limit', 5)")
-    cursor.execute("INSERT OR IGNORE INTO admin_config VALUES ('daily_gem_limit', 10)")
-    cursor.execute("INSERT OR IGNORE INTO admin_config VALUES ('gem_reward_amount', 15)")
+    # Boshlang'ich sozlamalar
+    cursor.execute("INSERT OR IGNORE INTO admin_settings VALUES ('daily_ad_limit', 5)")
+    cursor.execute("INSERT OR IGNORE INTO admin_settings VALUES ('gem_reward', 10)")
+    
+    # Test admin foydalanuvchi
+    cursor.execute("INSERT OR IGNORE INTO users (username, gold, gems) VALUES ('admin', 9999, 9999)")
     
     conn.commit()
     conn.close()
 
-def get_config():
+def get_setting(key: str) -> int:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT key, value FROM admin_config")
-    rows = cursor.fetchall()
+    cursor.execute("SELECT setting_value FROM admin_settings WHERE setting_key = ?", (key,))
+    result = cursor.fetchone()
     conn.close()
-    return {row[0]: row[1] for row in rows}
+    return result[0] if result else 0
 
-def update_config(key: str, value: int):
+def update_user_gems(username: str, amount: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("UPDATE admin_config SET value = ? WHERE key = ?", (value, key))
+    cursor.execute("UPDATE users SET gems = gems + ? WHERE username = ?", (amount, username))
     conn.commit()
     conn.close()
 
